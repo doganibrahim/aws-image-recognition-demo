@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Rekognition Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #f5f3ff;
+            padding: 20px;
+        }
+        
+        .container { 
+            background: #ffffff;
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            max-width: 500px;
+            width: 100%;
+            border: 1px solid #f0ebff;
+        }
+        
+        h2 { 
+            text-align: center;
+            color: #2d2d2d;
+            margin-bottom: 2rem;
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+        
+        .upload-section {
+            margin-bottom: 2rem;
+        }
+        
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            margin-bottom: 1rem;
+            border: 2px dashed #d4c5f9;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #fdfcff;
+            color: #5d5d5d;
+        }
+        
+        input[type="file"]:hover {
+            border-color: #b8a3e8;
+            background: #faf8ff;
+        }
+        
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #c8b6ff;
+            color: #2d2d2d;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        button:hover {
+            background: #b8a3e8;
+            transform: translateY(-1px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            background: #e8e8e8;
+            color: #a0a0a0;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .results-section {
+            margin-top: 2rem;
+        }
+        
+        h3 {
+            color: #2d2d2d;
+            margin-bottom: 1rem;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        #status {
+            padding: 12px 16px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            color: #5d5d5d;
+            font-size: 14px;
+        }
+        
+        #status.loading {
+            background: #fff9e6;
+            color: #8b7300;
+            border-left: 3px solid #ffd966;
+        }
+        
+        #status.success {
+            background: #e6f9f0;
+            color: #006644;
+            border-left: 3px solid #66d9a6;
+        }
+        
+        #status.error {
+            background: #ffe6e6;
+            color: #991f1f;
+            border-left: 3px solid #ff8080;
+        }
+        
+        #results {
+            padding: 1.5rem;
+            background: #fafafa;
+            border-radius: 12px;
+            min-height: 100px;
+            line-height: 1.8;
+            color: #2d2d2d;
+        }
+        
+        .label-item {
+            padding: 10px 14px;
+            background: #ffffff;
+            margin: 8px 0;
+            border-radius: 10px;
+            border-left: 3px solid #c8b6ff;
+            font-weight: 500;
+            font-size: 14px;
+            color: #2d2d2d;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Image Analysis</h2>
+        <div class="upload-section">
+            <input type="file" id="imageFile" accept="image/jpeg, image/png, image/jpg">
+            <button id="uploadButton">Analyze</button>
+        </div>
+        
+        <div class="results-section">
+            <h3>Results:</h3>
+            <div id="status">Please select an image...</div>
+            <div id="results"></div>
+        </div>
+    </div>
+
+<script>
+    const fileInput = document.getElementById('imageFile');
+    const uploadButton = document.getElementById('uploadButton');
+    const resultsDiv = document.getElementById('results');
+    const statusEl = document.getElementById('status');
+
+    const API_ENDPOINT = 'INSERT_YOUR_API_GATEWAY_URL_HERE'; 
+
+    uploadButton.addEventListener('click', async () => {
+        const file = fileInput.files[0];
+        
+        if (!file) {
+            statusEl.textContent = 'Error: You must select an image first!';
+            statusEl.className = 'error';
+            return;
+        }
+
+        // Disable the button
+        uploadButton.disabled = true;
+        statusEl.textContent = 'Loading and analyzing...';
+        statusEl.className = 'loading';
+        resultsDiv.innerHTML = '';
+
+        try {
+            // Convert file to Base64
+            const base64Data = await fileToBase64(file);
+
+            // Send to API
+            const response = await fetch(API_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/plain'
+                },
+                body: base64Data
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.labels) {
+                statusEl.textContent = 'Analysis Complete!';
+                statusEl.className = 'success';
+                
+                // Display results
+                resultsDiv.innerHTML = data.labels
+                    .map(label => `<div class="label-item">${label}</div>`)
+                    .join('');
+            } else {
+                throw new Error(data.message || JSON.stringify(data));
+            }
+
+        } catch (err) {
+            console.error('Error:', err);
+            statusEl.textContent = 'Error occurred!';
+            statusEl.className = 'error';
+            resultsDiv.innerHTML = `<div style="color: #721c24;">${err.message}</div>`;
+        } finally {
+            // Re-enable the button
+            uploadButton.disabled = false;
+        }
+    });
+
+    // Helper function to convert file to Base64
+    function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                // Extract only the base64 part from "data:image/jpeg;base64,ABC123..."
+                const base64 = reader.result.split(',')[1];
+                resolve(base64);
+            };
+            reader.onerror = error => reject(error);
+        });
+    }
+</script>
+
+</body>
+</html>
