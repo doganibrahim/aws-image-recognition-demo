@@ -32,3 +32,6 @@ The Lambda function works in **us-east-1** region. Ensure your API Gateway and L
 
 ## Demo
 Upload an image and get instant AI-powered object detection results.
+
+## Screenshot
+<img width="656" height="782" alt="image" src="https://github.com/user-attachments/assets/e709f217-ee7c-476e-8ccf-a93882455aa9" />
